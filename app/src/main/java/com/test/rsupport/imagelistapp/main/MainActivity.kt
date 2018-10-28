@@ -5,70 +5,43 @@ import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.StaggeredGridLayoutManager
 import android.view.View
 import com.test.rsupport.imagelistapp.R
-import com.test.rsupport.imagelistapp.service.ImageListService
 import kotlinx.android.synthetic.main.activity_main.*
-import okhttp3.ResponseBody
-import org.jsoup.Jsoup
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), MainView{
 
-    val imageListService = ImageListService.getInstance()
+    val mainPresenter = MainPresenter(this)
 
-    var imageUrls = ArrayList<String>()
-    var page = 1
-
-    val onClickLoadMoreImagesButton: View.OnClickListener = View.OnClickListener {
-        page++
-        loadImageList()
+    companion object {
+        val TAG = MainActivity::class.java.name
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        mainPresenter.onCreate()
+    }
+
+    override fun setMainRecyclerViewLayoutManager() {
         //set layoutManager
         recyclerviewMain.layoutManager =
                 StaggeredGridLayoutManager(3, StaggeredGridLayoutManager.VERTICAL)
         recyclerviewMain.setHasFixedSize(true)
-
-        //set adapter
-        recyclerviewMain.adapter =
-                ImageListAdapter(this@MainActivity, imageUrls, onClickLoadMoreImagesButton)
-
-        loadImageList()
     }
 
-    fun loadImageList() {
-        val map = HashMap<String, String>()
-        map.put("phrase", "collaboration")
-        map.put("sort", "mostpopular")
-        map.put("page", "$page")
+    override fun setMainRecyclerViewAdapter(
+            imageUrls: List<String>,
+            onClickLoadMoreImagesButton: View.OnClickListener) {
 
-        imageListService.getImageListAPI()
-                .imageInfos("photos", "collaboration", map)
-                .enqueue(object : Callback<ResponseBody> {
-                    override fun onResponse(call: Call<ResponseBody>?, response: Response<ResponseBody>?) {
-                        val responseBody = response?.body()?.string()
-
-                        val elements = Jsoup.parse(responseBody).select("article")
-                        for(element in elements) {
-                            imageUrls.add(element.attr("data-thumb-url"))
-                        }
-
-                        recyclerviewMain.adapter?.notifyDataSetChanged()
-                    }
-
-                    override fun onFailure(call: Call<ResponseBody>?, t: Throwable?) {
-
-                    }
-                })
+        if(recyclerviewMain.adapter == null) {
+            recyclerviewMain.adapter =
+                    ImageListAdapter(this@MainActivity, imageUrls, onClickLoadMoreImagesButton)
+        }
+        recyclerviewMain.adapter?.notifyDataSetChanged()
     }
 
-    companion object {
-        val TAG = "MainActivity"
+    override fun notifyMainRecyclerViewAdapterDataSetChanged() {
+        recyclerviewMain.adapter?.notifyDataSetChanged()
     }
 }
